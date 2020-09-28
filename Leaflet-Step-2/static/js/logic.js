@@ -47,7 +47,12 @@ function create_Legend(legend){
     }
 }
 
-var tileStreets = tileOutdoors = tileLight = tileSatellite = tileSatellite_streets = tileObj;
+var tileStreets = Object.assign({}, tileObj);
+var tileOutdoors = Object.assign({}, tileObj);
+var tileLight = Object.assign({}, tileObj);
+var tileSatellite = Object.assign({}, tileObj);
+var tileSatellite_streets = Object.assign({}, tileObj);
+
 tileStreets.id = mapMode.streets;
 tileOutdoors.id = mapMode.outdoors;
 tileLight.id = mapMode.light;
@@ -61,29 +66,52 @@ const LightTileLayer = L.tileLayer(mapbox, tileLight);
 const SatelliteTileLayer = L.tileLayer(mapbox, tileSatellite);
 const Satellite_streetsTileLayer = L.tileLayer(mapbox, tileSatellite_streets);
 
-const allTileLayers = [defTileLayer, StreetsTileLayer, OutdoorsTileLayer, LightTileLayer, SatelliteTileLayer, Satellite_streetsTileLayer];
+const allTileLayers = [StreetsTileLayer, OutdoorsTileLayer, LightTileLayer, SatelliteTileLayer, Satellite_streetsTileLayer, defTileLayer];
 
-const myMap = L.map('mapid', {center : [25,0], zoom : 3, layers : allTileLayers});
+const myMap = L.map('mapid', {center : [25,0], zoom : 3});
+L.layerGroup(allTileLayers).addTo(myMap);
 
-const baseMaps = {
-    "<span style='color: gray'>Streets</span>": StreetsTileLayer,
-    "Outdoors": OutdoorsTileLayer,
-    "Light": LightTileLayer,
-    'Dark(default)' : defTileLayer,
-    "Satellite": SatelliteTileLayer,
-    "Satellite_streets": Satellite_streetsTileLayer
-};
-const overlayMaps = {
-    "Default": defTileLayer
-};
-L.control.layers(baseMaps, overlayMaps).addTo(myMap);
-// defTileLayer.addTo(myMap);
+var legend = L.control({position: 'bottomright'});
+create_Legend(legend);
+legend.addTo(myMap);
 
-d3.json(dataURL.past_day).then(data=>{
-    let geoJsonObj = {};
+const baseMaps={
+                'Streets': StreetsTileLayer,
+                'Outdoors': OutdoorsTileLayer,
+                'Satellite': SatelliteTileLayer,
+                'Satellite_streets': Satellite_streetsTileLayer,
+                'Light': LightTileLayer,
+                'Dark(default)' : defTileLayer
+                }
+const overlayMaps= {}
+
+d3.json('./static/data/PB2002_plates.json').then(data=>{
+    let geojsonFeature = {};
     let geojsonData = [];
     data.features.forEach(d=>{
-        geoJsonObj={
+        geojsonFeature={
+                    'type' : 'Feature',
+                    'marker_options' : {
+                                        'color' : 'green',
+                                        'opacity': 0.5,
+                                        'fillOpacity': 0,
+                                        'weight' : 1
+                                        },
+                    'geometry':{
+                                'type' : d.geometry.type,
+                                'coordinates': d.geometry.coordinates
+                                }
+                    }
+        geojsonData.push(geojsonFeature)
+    })
+    overlayMaps['Plates'] = L.geoJSON(geojsonData,{style : (feature)=>feature.marker_options}).addTo(myMap)
+})
+
+d3.json(dataURL.past_day).then(data=>{
+    let geojsonFeature = {};
+    let geojsonData = [];
+    data.features.forEach(d=>{
+        geojsonFeature={
                     'type' : 'Feature',
                     'properties' : {
                                     'popupContent' : `<b>${d.properties.place}</b><br>${new Date(d.properties.time)}<br><b>${d.properties.mag}</b> magnitude<br><b>${d.geometry.coordinates[2]}</b> km. dept<br>`
@@ -101,16 +129,11 @@ d3.json(dataURL.past_day).then(data=>{
                                 'coordinates': d.geometry.coordinates.slice(0,2)
                                 }
                     }
-        geojsonData.push(geoJsonObj)
+        geojsonData.push(geojsonFeature)
     })
-    L.geoJSON(geojsonData,{pointToLayer :(feature, latlng)=>L.circleMarker(latlng, feature.marker_options)})
-        .bindPopup(layer=>layer.feature.properties.popupContent)
-        .addTo(myMap)
+    overlayMaps['Earth Quake'] = L.geoJSON(geojsonData,{pointToLayer :(feature, latlng)=>L.circleMarker(latlng, feature.marker_options)})
+                                    .bindPopup(layer=>layer.feature.properties.popupContent)
+                                    .addTo(myMap);
 
+    L.control.layers(baseMaps, overlayMaps).addTo(myMap)
 })
-
-var legend = L.control({position: 'bottomright'});
-create_Legend(legend);
-legend.addTo(myMap);
-
-myMap.on('click', ()=>L.popup.open(myMap));

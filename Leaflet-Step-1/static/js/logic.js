@@ -52,39 +52,36 @@ const defTileLayer = L.tileLayer(mapbox, tileObj);
 const myMap = L.map('mapid').setView([25,0],3);
 defTileLayer.addTo(myMap);
 
-d3.json(dataURL.past_day).then(data => {
-    let geoJsonObj = {};
-    let geojsonData = [];
-
-    data.features.forEach(d => {
-        geoJsonObj={
-                    'type' : 'Feature',
-                    'properties' : {
-                                    'popupContent' : `<b>${d.properties.place}</b><br>${new Date(d.properties.time)}<br><b>${d.properties.mag}</b> magnitude<br><b>${d.geometry.coordinates[2]}</b> km. dept<br>`
-                                    },
-                    'marker_options' : {
-                                        'radius' : d.properties.mag * 7,
-                                        'fillColor' : layer_Color_Picker(d.geometry.coordinates[2]),
-                                        'color' : 'white',
-                                        'weight' : 1,
-                                        'opacity' : 1,
-                                        'fillOpacity' : 0.2
-                                        },
-                    'geometry':{
-                                'type' : 'Point',
-                                'coordinates': d.geometry.coordinates.slice(0,2)
-                                }
-                    }
-        geojsonData.push(geoJsonObj)
-    })
-    L.geoJSON(geojsonData,{pointToLayer :(feature, latlng) => L.circleMarker(latlng, feature.marker_options)})
-        .bindPopup(layer => layer.feature.properties.popupContent)
-        .addTo(myMap)
-
-})
-
 var legend = L.control({position: 'bottomright'});
 create_Legend(legend);
 legend.addTo(myMap);
 
-myMap.on('click', ()=>L.popup.open(myMap));
+d3.json(dataURL.past_day).then(data => {
+    let geojsonFeature = {};
+    let geojsonData = [];
+
+    data.features.forEach(d => {
+        geojsonFeature={
+                        'type' : 'Feature',
+                        'properties' : {
+                                        'popupContent' : `<b>${d.properties.place}</b><br>${new Date(d.properties.time)}<br><b>${d.properties.mag}</b> magnitude<br><b>${d.geometry.coordinates[2]}</b> km. dept<br>`
+                                        },
+                        'marker_options' : {
+                                            'radius' : d.properties.mag * 7,
+                                            'fillColor' : layer_Color_Picker(d.geometry.coordinates[2]),
+                                            'color' : 'white',
+                                            'weight' : 1,
+                                            'opacity' : 1,
+                                            'fillOpacity' : 0.2
+                                            },
+                        'geometry':{
+                                    'type' : 'Point',
+                                    'coordinates': d.geometry.coordinates.slice(0,2)
+                                    }
+                        }
+        geojsonData.push(geojsonFeature)
+    })
+    L.geoJSON(geojsonData,{pointToLayer :(feature, latlng) => L.circleMarker(latlng, feature.marker_options)})
+        .bindPopup(layer => layer.feature.properties.popupContent)
+        .addTo(myMap)
+})

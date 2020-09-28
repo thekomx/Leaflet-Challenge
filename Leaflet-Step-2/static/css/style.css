@@ -22,6 +22,7 @@ body {
 .legend {
   line-height: 18px;
   color: #555;
+  font-family: 'Nunito Sans', sans-serif;
 }
 .legend i {
   width: 18px;
