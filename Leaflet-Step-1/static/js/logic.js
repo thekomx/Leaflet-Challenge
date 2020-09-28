@@ -20,10 +20,11 @@ const tileObj ={
                 tileSize: 512,
                 zoomOffset: -1
                 }
+const mapbox = 'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}';
 const depthColor = ['#0000FF','#00FFFF', '#00FF80', '#40FF00', '#BFFF00', '#FFFF00', '#FFBF00', '#FF8000', '#ff0000'];
 
 
-function layer_Color_Picker(num){
+function depth_Color_Picker(num){
     let n = (num/10).toFixed(0);
 
     if(n < 0){n = 0}
@@ -47,41 +48,17 @@ function create_Legend(legend){
 }
 
 
-const mapbox = 'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}';
-const defTileLayer = L.tileLayer(mapbox, tileObj);
 const myMap = L.map('mapid').setView([25,0],3);
-defTileLayer.addTo(myMap);
+L.tileLayer(mapbox, tileObj).addTo(myMap);
 
-var legend = L.control({position: 'bottomright'});
+const legend = L.control({position: 'bottomright'});
 create_Legend(legend);
 legend.addTo(myMap);
 
-d3.json(dataURL.past_day).then(data => {
-    let geojsonFeature = {};
-    let geojsonData = [];
-
-    data.features.forEach(d => {
-        geojsonFeature={
-                        'type' : 'Feature',
-                        'properties' : {
-                                        'popupContent' : `<b>${d.properties.place}</b><br>${new Date(d.properties.time)}<br><b>${d.properties.mag}</b> magnitude<br><b>${d.geometry.coordinates[2]}</b> km. dept<br>`
-                                        },
-                        'marker_options' : {
-                                            'radius' : d.properties.mag * 7,
-                                            'fillColor' : layer_Color_Picker(d.geometry.coordinates[2]),
-                                            'color' : 'white',
-                                            'weight' : 1,
-                                            'opacity' : 1,
-                                            'fillOpacity' : 0.2
-                                            },
-                        'geometry':{
-                                    'type' : 'Point',
-                                    'coordinates': d.geometry.coordinates.slice(0,2)
-                                    }
-                        }
-        geojsonData.push(geojsonFeature)
-    })
-    L.geoJSON(geojsonData,{pointToLayer :(feature, latlng) => L.circleMarker(latlng, feature.marker_options)})
-        .bindPopup(layer => layer.feature.properties.popupContent)
+d3.json(dataURL.past_day).then(data=>{
+    L.geoJSON(data,{pointToLayer :(feature, latlng)=>L.circleMarker(latlng, {'radius' : feature.properties.mag*7,
+                                                                                'fillColor' : depth_Color_Picker(feature.geometry.coordinates[2]),
+                                                                                'color' : 'white',  'weight' : 1, 'opacity' : 1, 'fillOpacity' : 0.2})})
+        .bindPopup(layer=>`<b>${layer.feature.properties.place}</b><br>${new Date(layer.feature.properties.time)}<br><b>${layer.feature.properties.mag}</b> magnitude<br><b>${layer.feature.geometry.coordinates[2]}</b> km. depth<br>`)
         .addTo(myMap)
 })

@@ -23,8 +23,39 @@ const tileObj ={
 const mapbox = 'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}';
 const depthColor = ['#0000FF','#00FFFF', '#00FF80', '#40FF00', '#BFFF00', '#FFFF00', '#FFBF00', '#FF8000', '#ff0000'];
 
+var tileStreets = Object.assign({}, tileObj);
+var tileOutdoors = Object.assign({}, tileObj);
+var tileLight = Object.assign({}, tileObj);
+var tileSatellite = Object.assign({}, tileObj);
+var tileSatellite_streets = Object.assign({}, tileObj);
 
-function layer_Color_Picker(num){
+tileStreets.id = mapMode.streets;
+tileOutdoors.id = mapMode.outdoors;
+tileLight.id = mapMode.light;
+tileSatellite.id = mapMode.satellite;
+tileSatellite_streets.id = mapMode.satellite_streets;
+
+const defTileLayer = L.tileLayer(mapbox, tileObj);
+const StreetsTileLayer = L.tileLayer(mapbox, tileStreets);
+const OutdoorsTileLayer = L.tileLayer(mapbox, tileOutdoors);
+const LightTileLayer = L.tileLayer(mapbox, tileLight);
+const SatelliteTileLayer = L.tileLayer(mapbox, tileSatellite);
+const Satellite_streetsTileLayer = L.tileLayer(mapbox, tileSatellite_streets);
+
+const baseMaps={
+    'Streets': StreetsTileLayer,
+    'Outdoors': OutdoorsTileLayer,
+    'Satellite': SatelliteTileLayer,
+    'Satellite_streets': Satellite_streetsTileLayer,
+    'Light': LightTileLayer,
+    'Dark(default)' : defTileLayer
+}
+const overlayMaps= {}
+
+const allTileLayers = [StreetsTileLayer, OutdoorsTileLayer, LightTileLayer, SatelliteTileLayer, Satellite_streetsTileLayer, defTileLayer];
+
+
+function depth_Color_Picker(num){
     let n = (num/10).toFixed(0);
 
     if(n < 0){n = 0}
@@ -47,93 +78,25 @@ function create_Legend(legend){
     }
 }
 
-var tileStreets = Object.assign({}, tileObj);
-var tileOutdoors = Object.assign({}, tileObj);
-var tileLight = Object.assign({}, tileObj);
-var tileSatellite = Object.assign({}, tileObj);
-var tileSatellite_streets = Object.assign({}, tileObj);
-
-tileStreets.id = mapMode.streets;
-tileOutdoors.id = mapMode.outdoors;
-tileLight.id = mapMode.light;
-tileSatellite.id = mapMode.satellite;
-tileSatellite_streets.id = mapMode.satellite_streets;
-
-const defTileLayer = L.tileLayer(mapbox, tileObj);
-const StreetsTileLayer = L.tileLayer(mapbox, tileStreets);
-const OutdoorsTileLayer = L.tileLayer(mapbox, tileOutdoors);
-const LightTileLayer = L.tileLayer(mapbox, tileLight);
-const SatelliteTileLayer = L.tileLayer(mapbox, tileSatellite);
-const Satellite_streetsTileLayer = L.tileLayer(mapbox, tileSatellite_streets);
-
-const allTileLayers = [StreetsTileLayer, OutdoorsTileLayer, LightTileLayer, SatelliteTileLayer, Satellite_streetsTileLayer, defTileLayer];
 
 const myMap = L.map('mapid', {center : [25,0], zoom : 3});
 L.layerGroup(allTileLayers).addTo(myMap);
 
-var legend = L.control({position: 'bottomright'});
+const legend = L.control({position: 'bottomright'});
 create_Legend(legend);
 legend.addTo(myMap);
 
-const baseMaps={
-                'Streets': StreetsTileLayer,
-                'Outdoors': OutdoorsTileLayer,
-                'Satellite': SatelliteTileLayer,
-                'Satellite_streets': Satellite_streetsTileLayer,
-                'Light': LightTileLayer,
-                'Dark(default)' : defTileLayer
-                }
-const overlayMaps= {}
 
-d3.json('./static/data/PB2002_plates.json').then(data=>{
-    let geojsonFeature = {};
-    let geojsonData = [];
-    data.features.forEach(d=>{
-        geojsonFeature={
-                    'type' : 'Feature',
-                    'marker_options' : {
-                                        'color' : 'green',
-                                        'opacity': 0.5,
-                                        'fillOpacity': 0,
-                                        'weight' : 1
-                                        },
-                    'geometry':{
-                                'type' : d.geometry.type,
-                                'coordinates': d.geometry.coordinates
-                                }
-                    }
-        geojsonData.push(geojsonFeature)
-    })
-    overlayMaps['Plates'] = L.geoJSON(geojsonData,{style : (feature)=>feature.marker_options}).addTo(myMap)
+d3.json('./static/data/PB2002_boundaries.json').then(data=>{
+    overlayMaps['Tectonic Plates'] = L.geoJSON(data,{style : {'color' : 'green', 'opacity': 0.5, 'weight' : 2}}).addTo(myMap)
 })
 
 d3.json(dataURL.past_day).then(data=>{
-    let geojsonFeature = {};
-    let geojsonData = [];
-    data.features.forEach(d=>{
-        geojsonFeature={
-                    'type' : 'Feature',
-                    'properties' : {
-                                    'popupContent' : `<b>${d.properties.place}</b><br>${new Date(d.properties.time)}<br><b>${d.properties.mag}</b> magnitude<br><b>${d.geometry.coordinates[2]}</b> km. dept<br>`
-                                    },
-                    'marker_options' : {
-                                        'radius' : d.properties.mag*7,
-                                        'fillColor' : layer_Color_Picker(d.geometry.coordinates[2]),
-                                        'color' : 'white',
-                                        'weight' : 1,
-                                        'opacity' : 1,
-                                        'fillOpacity' : 0.2
-                                        },
-                    'geometry':{
-                                'type' : 'Point',
-                                'coordinates': d.geometry.coordinates.slice(0,2)
-                                }
-                    }
-        geojsonData.push(geojsonFeature)
-    })
-    overlayMaps['Earth Quake'] = L.geoJSON(geojsonData,{pointToLayer :(feature, latlng)=>L.circleMarker(latlng, feature.marker_options)})
-                                    .bindPopup(layer=>layer.feature.properties.popupContent)
-                                    .addTo(myMap);
+    overlayMaps['Earthquakes'] = L.geoJSON(data,{pointToLayer :(feature, latlng)=>L.circleMarker(latlng, {'radius' : feature.properties.mag*7,
+                                                                                                            'fillColor' : depth_Color_Picker(feature.geometry.coordinates[2]),
+                                                                                                            'color' : 'white',  'weight' : 1, 'opacity' : 1, 'fillOpacity' : 0.2})})
+        .bindPopup(layer=>`<b>${layer.feature.properties.place}</b><br>${new Date(layer.feature.properties.time)}<br><b>${layer.feature.properties.mag}</b> magnitude<br><b>${layer.feature.geometry.coordinates[2]}</b> km. depth<br>`)
+        .addTo(myMap);
 
     L.control.layers(baseMaps, overlayMaps).addTo(myMap)
 })
